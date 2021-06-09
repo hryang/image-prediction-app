@@ -1,0 +1,96 @@
+edition: 1.0.0          #  命令行YAML规范版本，遵循语义化版本（Semantic Versioning）规范
+name: todo-list         # 项目名称
+access: '{{access}}'    #  秘钥别名
+
+services:
+  TodoList: #  服务名称
+    component: devsapp/fc
+    actions: # 自定义执行逻辑
+      pre-deploy: # 在deploy之前运行
+        - run: s build --use-docker  # 要运行的命令行
+          path: ./ # 命令行运行的路径
+      post-deploy: # 在deploy之前运行
+        - run: s nas upload -r -n ./.s/build/artifacts/ai-cv-image-prediction/server/.s/python nas:///mnt/auto/.fun/python   # 要运行的命令行
+          path: ./ # 命令行运行的路径
+    props: #  组件的属性值
+      region: cn-hangzhou
+      service:
+        name: ai-cv-image-prediction
+        description: 图片目标检测服务
+        nasConfig: auto
+        vpcConfig: auto
+        logConfig: auto
+      function:
+        name: server
+        description: 图片目标检测
+        runtime: python3
+        codeUri: ./src
+        handler: index.app
+        memorySize: 3072
+        timeout: 60
+        environmentVariables:
+          PYTHONUSERBASE: /mnt/auto/.fun/python
+      triggers:
+        - name: httpTrigger
+          type: http
+          config:
+            authType: anonymous
+            methods:
+              - GET
+              - POST
+              - PUT
+      customDomains:
+        - domainName: auto
+          protocol: HTTP
+          routeConfigs:
+            - path: /*
+
+
+
+ServerlessBookImageAIDemo:
+  Component: fc
+  Provider: alibaba
+  Access: anycodes_release
+  Properties:
+    Region: cn-hongkong
+    Service:
+      Name: serverless-book-case
+      Description: Serverless 实践图书案例
+      Vpc:
+        SecurityGroupId: sg-j6c45wkv4vf4ghg104mc
+        VSwitchIds:
+          - vsw-j6c797ywau90y6y03ohbq
+        VpcId: vpc-j6c9lk4av0859r4e0tff7
+      Log: Auto
+      Nas: Auto
+    Function:
+      Name: ai-cv-image-prediction
+      Description: 图片目标检测
+      CodeUri:
+        Src: ./src
+        Excludes:
+          - src/.fun
+          - src/model
+      Handler: index.app
+      Environment:
+        - Key: PYTHONUSERBASE
+          Value: /mnt/auto/.fun/python
+      MemorySize: 3072
+      Runtime: python3
+      Timeout: 60
+      Triggers:
+        - Name: ImageAI
+          Type: HTTP
+          Parameters:
+            AuthType: ANONYMOUS
+            Methods:
+              - GET
+              - POST
+              - PUT
+            Domains:
+              - Domain: prediction.cv.case.serverless.fun
+                Protocol:
+                  - HTTP
+                Routes:
+                  - Path: '/*'
+
